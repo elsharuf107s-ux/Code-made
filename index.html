@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>Infinite Clash</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Exo+2:wght@300;700;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;user-select:none;touch-action:manipulation}
+body{
+  background:#05060f;color:#dde4ff;
+  font-family:'Rajdhani',system-ui,sans-serif;font-weight:500;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 90% 50% at 50% -5%,#2d1b6940,transparent),
+             radial-gradient(ellipse 60% 35% at 15% 105%,#06b6d420,transparent),
+             radial-gradient(ellipse 40% 30% at 85% 100%,#7c3aed18,transparent);
+  pointer-events:none;z-index:0;
+}
+#game{position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column}
+
+/* ═══ SCREENS ═══ */
+.screen{display:none;width:100%;height:100%;flex-direction:column}
+.screen.active{display:flex}
+
+/* ═══ MENU ═══ */
+#screen-menu{
+  align-items:center;justify-content:center;gap:6px;
+  background:radial-gradient(ellipse at 50% 45%,#1a0b3360,transparent);
+}
+.mlg{font-size:68px;margin-bottom:4px;filter:drop-shadow(0 0 24px #7c3aedaa) drop-shadow(0 0 50px #38bdf855)}
+.mt{
+  font-family:'Exo 2',sans-serif;font-weight:900;font-size:2.5rem;
+  background:linear-gradient(130deg,#c4b5fd,#38bdf8,#f472b6);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:3px;text-align:center;
+}
+.ms{font-size:.78rem;color:#475569;letter-spacing:6px;margin-bottom:36px;text-align:center}
+.mbtn{
+  background:linear-gradient(135deg,#4f0ba8,#7c3aed);color:#fff;
+  border:none;border-radius:14px;padding:14px 52px;
+  font-family:'Rajdhani',sans-serif;font-weight:700;font-size:1.1rem;
+  cursor:pointer;letter-spacing:1px;margin:5px;
+  box-shadow:0 4px 28px #7c3aed44;transition:transform.1s,box-shadow.1s;
+}
+.mbtn:active{transform:scale(.95)}
+.mbtn.sec{background:linear-gradient(135deg,#0c1a3a,#1251a0);box-shadow:0 4px 20px #38bdf833}
+
+/* ═══ GAME SCREEN ═══ */
+#screen-game{overflow:hidden}
+
+/* HP BARS */
+.hpbar{display:flex;align-items:center;gap:8px;padding:5px 12px;background:rgba(0,0,0,.52);border-bottom:1px solid #ffffff09;flex-shrink:0}
+.hpl{font-size:.67rem;font-weight:700;width:56px;flex-shrink:0}
+.hpt{flex:1;height:10px;background:#0d1117;border-radius:5px;overflow:hidden;border:1px solid #ffffff08}
+.hpf{height:100%;border-radius:5px;transition:width .45s}
+.enemy .hpf{background:linear-gradient(90deg,#dc2626,#f97316)}
+.player .hpf{background:linear-gradient(90deg,#16a34a,#22d3ee)}
+.hptx{font-size:.62rem;width:84px;text-align:right;flex-shrink:0;color:#64748b}
+
+/* INFO ROW */
+.inforow{display:flex;align-items:center;justify-content:space-between;padding:2px 12px;background:rgba(0,0,0,.35);flex-shrink:0;font-size:.6rem;color:#334155;border-bottom:1px solid #ffffff05}
+
+/* FIELD */
+#field{flex:1;display:flex;flex-direction:column;justify-content:space-around;padding:3px 5px 3px;overflow:hidden;position:relative;min-height:0}
+
+/* FIELD ROWS */
+.frow{display:flex;justify-content:center;align-items:center;gap:4px}
+
+/* WARRIOR SLOTS */
+.ws{
+  width:110px;height:84px;border:1.5px dashed #1a2540;border-radius:11px;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;cursor:pointer;flex-shrink:0;
+  transition:border-color .2s,box-shadow .2s;
+}
+.ws.te{border-color:#dc2626bb;box-shadow:0 0 14px #dc262655;animation:epulse 1.1s infinite}
+.ws.tp{border-color:#7c3aedbb;box-shadow:0 0 10px #7c3aed55}
+@keyframes epulse{0%,100%{box-shadow:0 0 8px #dc262655}50%{box-shadow:0 0 22px #dc2626aa}}
+
+/* SPELL/TRAP ROWS */
+.str{display:flex;justify-content:center;align-items:center;gap:4px}
+.ss{width:110px;height:46px;border:1px dashed #1a2540;border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:border-color .2s}
+.ss.ts{border-color:#7c3aedbb;box-shadow:0 0 8px #7c3aed44}
+
+/* VS DIVIDER */
+.vsd{
+  text-align:center;font-size:.58rem;letter-spacing:8px;color:#1e293b;
+  padding:1px 0;position:relative;flex-shrink:0;
+}
+.vsd::before,.vsd::after{content:'';position:absolute;top:50%;width:32%;height:1px;background:linear-gradient(90deg,transparent,#7c3aed28,transparent);}
+.vsd::before{left:4%}.vsd::after{right:4%}
+
+/* ── CARDS (FIELD) ── */
+.card{
+  border-radius:9px;display:flex;flex-direction:column;
+  align-items:center;justify-content:space-between;
+  padding:4px 3px 3px;cursor:pointer;position:relative;
+  border:1px solid rgba(255,255,255,.1);overflow:hidden;
+  transition:transform .15s,box-shadow .15s;
+}
+.card:active{transform:scale(.92)}
+.card.sel{transform:translateY(-6px)!important;box-shadow:0 0 20px #7c3aedcc!important}
+
+/* warrior variants */
+.cw{background:linear-gradient(160deg,#0f0322,#280966);border-color:#4c1d9566;box-shadow:0 2px 10px #4c1d9533}
+.cw.guardian{background:linear-gradient(160deg,#180d00,#5a3800);border-color:#b45309aa;box-shadow:0 2px 8px #92400e44}
+.cw.awakened{background:linear-gradient(160deg,#081500,#174200);border-color:#16a34aaa;box-shadow:0 2px 8px #16653144}
+.cw.fusion{background:linear-gradient(160deg,#09001a,#3b0070);border-color:#9333eabb;box-shadow:0 2px 12px #9333ea55}
+.cj{background:linear-gradient(160deg,#001022,#003068);border-color:#1d4ed8aa;box-shadow:0 2px 8px #4c1d9533}
+.ct{background:linear-gradient(160deg,#190000,#570000);border-color:#dc2626aa;box-shadow:0 2px 8px #dc262633}
+.cfd{background:linear-gradient(160deg,#0d0d1c,#151528)!important;border-color:#1e293b!important;box-shadow:none!important}
+
+/* field card dims */
+.fc{width:106px;height:80px}
+.fc .ci{font-size:1.35rem;margin-top:2px;line-height:1}
+.fc .cn{font-size:.42rem;font-weight:700;text-align:center;line-height:1.15;color:rgba(255,255,255,.9);margin-top:1px}
+.fc .cs{width:100%;display:flex;justify-content:space-between;font-size:.4rem;color:rgba(255,255,255,.65)}
+.fc .chb{width:100%;height:3px;background:#0a0a15;border-radius:2px;overflow:hidden;margin-top:1px}
+.fc .chf{height:100%;background:linear-gradient(90deg,#16a34a,#22d3ee);transition:width .35s}
+
+/* hand card dims */
+.hc{width:72px;height:96px;flex-shrink:0}
+.hc .ci{font-size:1.55rem;margin-top:3px;line-height:1}
+.hc .cn{font-size:.43rem;font-weight:700;text-align:center;line-height:1.15;color:rgba(255,255,255,.9)}
+.hc .cs{width:100%;display:flex;justify-content:space-between;font-size:.41rem;color:rgba(255,255,255,.65)}
+.hc .chb{width:100%;height:3px;background:#0a0a15;border-radius:2px;overflow:hidden;margin-top:1px}
+.hc .chf{height:100%;background:linear-gradient(90deg,#16a34a,#22d3ee)}
+
+/* compact ST card */
+.cc{
+  width:106px;height:42px;border-radius:7px;
+  display:flex;align-items:center;gap:5px;padding:4px 7px;
+  cursor:pointer;border:1px solid rgba(255,255,255,.1);
+  transition:transform .15s;
+}
+.cc:active{transform:scale(.94)}
+.cc .ci{font-size:1.05rem;flex-shrink:0}
+.cc .cni{flex:1;overflow:hidden}
+.cc .cn{font-size:.41rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cc .ct2{font-size:.37rem;color:rgba(255,255,255,.42);white-space:nowrap}
+
+/* cost badge */
+.ccst{
+  position:absolute;top:2px;left:3px;background:rgba(0,0,0,.75);border-radius:50%;
+  width:14px;height:14px;display:flex;align-items:center;justify-content:center;
+  font-size:.46rem;font-weight:700;color:#38bdf8;border:1px solid #38bdf833;
+}
+/* status icons */
+.cst{position:absolute;top:2px;right:2px;display:flex;flex-direction:column;gap:1px}
+.si{font-size:.58rem;line-height:1}
+
+/* ── BOTTOM UI ── */
+#cmb{display:flex;align-items:center;gap:8px;padding:3px 12px;background:rgba(0,0,0,.42);flex-shrink:0}
+#cmbl{font-size:.6rem;color:#a78bfa;font-weight:700;width:62px}
+#cmbt{flex:1;height:8px;background:#0d1117;border-radius:4px;overflow:hidden;border:1px solid #ffffff06}
+#cmbf{height:100%;background:linear-gradient(90deg,#7c3aed,#ec4899);border-radius:4px;transition:width .35s;width:0%}
+#cmbp{font-size:.6rem;color:#a78bfa;width:32px;text-align:right}
+
+#chk{display:flex;align-items:center;gap:8px;padding:3px 12px;background:rgba(0,0,0,.32);flex-shrink:0}
+#chkl{font-size:.6rem;color:#38bdf8;width:62px}
+#pips{display:flex;gap:4px}
+.pip{width:13px;height:13px;border-radius:50%;border:1.5px solid #38bdf8;transition:background .2s}
+.pip.on{background:#38bdf8;box-shadow:0 0 7px #38bdf8}
+#chkn{font-size:.6rem;color:#38bdf8;margin-left:auto}
+
+#logline{font-size:.62rem;color:#475569;padding:3px 12px;background:rgba(0,0,0,.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;height:21px}
+
+#hand{display:flex;gap:5px;padding:6px 8px;background:rgba(0,0,0,.58);border-top:1px solid #ffffff07;overflow-x:auto;min-height:110px;align-items:flex-start;flex-shrink:0;scrollbar-width:none}
+#hand::-webkit-scrollbar{display:none}
+
+#abar{display:flex;align-items:center;gap:4px;padding:6px 8px;background:rgba(0,0,0,.75);border-top:1px solid #ffffff0c;flex-shrink:0}
+#pbadge{font-size:.58rem;font-weight:700;background:linear-gradient(135deg,#7c3aed,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;white-space:nowrap;min-width:65px;flex-shrink:0}
+.ab{background:rgba(124,58,237,.16);border:1px solid #7c3aed44;color:#a78bfa;border-radius:9px;padding:8px 12px;font-size:.67rem;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:'Rajdhani',sans-serif;letter-spacing:.5px;transition:background .15s}
+.ab:active{background:rgba(124,58,237,.38)}
+.ab.pr{background:linear-gradient(135deg,#4f0ba8,#7c3aed);color:#fff;border:none;box-shadow:0 2px 14px #7c3aed44}
+.ab:disabled{opacity:.38;pointer-events:none}
+
+/* ═══ RESULT SCREENS ═══ */
+#screen-win,#screen-lose{align-items:center;justify-content:center;gap:10px}
+#screen-win{background:radial-gradient(ellipse at 50% 45%,#14301480,transparent)}
+#screen-lose{background:radial-gradient(ellipse at 50% 45%,#38070780,transparent)}
+.ricon{font-size:70px;filter:drop-shadow(0 0 22px currentColor)}
+.rtit{font-family:'Exo 2',sans-serif;font-weight:900;font-size:2.6rem;letter-spacing:2px}
+.rtit.w{color:#fbbf24}.rtit.l{color:#ef4444}
+.rsub{font-size:.82rem;color:#475569;letter-spacing:4px}
+.rbox{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px 22px;width:230px;margin:4px 0}
+.rrow{display:flex;justify-content:space-between;font-size:.8rem;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.rrow:last-child{border-bottom:none}
+.rrow span{color:#a78bfa;font-weight:700}
+
+/* ═══ MODAL ═══ */
+#modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:1000;align-items:center;justify-content:center;padding:14px}
+#modal.open{display:flex}
+#mbox{background:linear-gradient(160deg,#08091e,#14073a);border:1px solid #7c3aed44;border-radius:18px;padding:18px;max-width:296px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 0 50px #7c3aed22}
+.mic{font-size:50px;text-align:center;display:block;margin-bottom:7px}
+.mn{font-family:'Exo 2',sans-serif;font-weight:700;font-size:1.18rem;text-align:center;margin-bottom:2px}
+.mtp{font-size:.67rem;color:#7c3aed;text-align:center;letter-spacing:2px;margin-bottom:10px}
+.mgr{display:grid;grid-template-columns:1fr 1fr;gap:5px;background:rgba(0,0,0,.32);border-radius:10px;padding:9px;margin-bottom:10px}
+.mst{font-size:.72rem}.mst b{color:#38bdf8}
+.mtags{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:8px}
+.tg{font-size:.57rem;padding:2px 7px;border-radius:10px;font-weight:700}
+.tg.tr{background:#dc262620;border:1px solid #dc2626;color:#f87171}
+.tg.ch{background:#16a34a20;border:1px solid #16a34a;color:#4ade80}
+.mfx{font-size:.7rem;color:#94a3b8;background:rgba(0,0,0,.3);border-radius:9px;padding:9px;line-height:1.5;margin-bottom:10px}
+
+/* TOASTS */
+#tst{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2000;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:4px;width:278px}
+.toast{background:rgba(3,5,20,.92);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:6px 13px;font-size:.74rem;text-align:center;animation:tsl .28s ease;width:100%}
+.toast.dmg{border-color:#dc262688;color:#fca5a5}.toast.hl{border-color:#16a34a88;color:#86efac}
+.toast.ch{border-color:#ec489988;color:#f9a8d4}.toast.ul{border-color:#fbbf2488;color:#fde68a;font-weight:700}.toast.nfo{color:#94a3b8}
+@keyframes tsl{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* TURN BADGE */
+#tbadge{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:linear-gradient(135deg,#4f0ba8,#7c3aed);color:#fff;padding:10px 26px;border-radius:28px;font-size:.98rem;font-weight:700;letter-spacing:2px;z-index:900;opacity:0;pointer-events:none;transition:opacity .3s;box-shadow:0 0 32px #7c3aed55;font-family:'Exo 2',sans-serif}
+#tbadge.show{opacity:1}
+
+/* CHAIN POP */
+#cpop{position:fixed;top:37%;left:50%;transform:translateX(-50%);z-index:800;pointer-events:none;opacity:0;transition:opacity .2s;text-align:center}
+#cpop.show{opacity:1}
+.cplb{font-size:.78rem;font-weight:700;color:#ec4899;text-shadow:0 0 12px #ec4899;letter-spacing:2px}
+.cpn{font-family:'Exo 2',sans-serif;font-weight:900;font-size:2.1rem;background:linear-gradient(135deg,#ec4899,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.anim-summon{animation:summon .7s ease both;transform-origin:center bottom}
+@keyframes summon{0%{transform:translateY(24px) scale(.85);opacity:0}50%{transform:translateY(-6px) scale(1.03);opacity:1}100%{transform:translateY(0) scale(1)}}
+.anim-attack{animation:attack .45s ease both}
+@keyframes attack{0%{filter:drop-shadow(0 0 0 rgba(255,255,255,0))}50%{transform:translateY(-8px) rotate(-2deg);filter:drop-shadow(0 0 12px #ff4d6d)}100%{transform:translateY(0) rotate(0)}}
+</style>
+</head>
+<body>
+<div id="game">
+
+<!-- ── MENU ── -->
+<div id="screen-menu" class="screen active">
+  <div class="mlg">⚔️</div>
+  <div class="mt">INFINITE CLASH</div>
+  <div class="ms">CHASE THE INFINITE</div>
+  <button class="mbtn" onclick="startGame()">▶ &nbsp;START BATTLE</button>
+  <button class="mbtn" onclick="showDeckBuilder()">🧭 &nbsp;DECK BUILDER</button>
+  <button class="mbtn sec" onclick="howTo()">📖 &nbsp;HOW TO PLAY</button>
+</div>
+
+<!-- ── GAME ── -->
+<div id="screen-game" class="screen">
+  <div class="hpbar enemy">
+    <div class="hpl" style="color:#f87171">⚠ ENEMY</div>
+    <div class="hpt"><div class="hpf" id="ehpf" style="width:100%"></div></div>
+    <div class="hptx" id="ehpt">—</div>
+  </div>
+  <div class="inforow">
+    <div id="einf">Deck: 20 &nbsp;|&nbsp; Hand: 5 &nbsp;|&nbsp; Chakra: ●●●●●</div>
+    <div id="flrl" style="color:#7c3aed;font-weight:700">FLOOR 1</div>
+  </div>
+  <div id="field">
+    <!-- Enemy ST row -->
+    <div class="str" id="estr">
+      <div class="ss" id="est0" onclick="zc('e','st',0)"></div>
+      <div class="ss" id="est1" onclick="zc('e','st',1)"></div>
+      <div class="ss" id="est2" onclick="zc('e','st',2)"></div>
+    </div>
+    <!-- Enemy warriors -->
+    <div class="frow">
+      <div class="ws" id="ew0" onclick="zc('e','w',0)"></div>
+      <div class="ws" id="ew1" onclick="zc('e','w',1)"></div>
+      <div class="ws" id="ew2" onclick="zc('e','w',2)"></div>
+    </div>
+    <div class="vsd">⚡ &nbsp;VS&nbsp; ⚡</div>
+    <!-- Player warriors -->
+    <div class="frow">
+      <div class="ws" id="pw0" onclick="zc('p','w',0)"></div>
+      <div class="ws" id="pw1" onclick="zc('p','w',1)"></div>
+      <div class="ws" id="pw2" onclick="zc('p','w',2)"></div>
+    </div>
+    <!-- Player ST row -->
+    <div class="str" id="pstr">
+      <div class="ss" id="pst0" onclick="zc('p','st',0)"></div>
+      <div class="ss" id="pst1" onclick="zc('p','st',1)"></div>
+      <div class="ss" id="pst2" onclick="zc('p','st',2)"></div>
+    </div>
+  </div>
+  <div id="cmb">
+    <div id="cmbl">⚡ COMBO</div>
+    <div id="cmbt"><div id="cmbf"></div></div>
+    <div id="cmbp">0%</div>
+  </div>
+  <div id="chk">
+    <div id="chkl">💧 CHAKRA</div>
+    <div id="pips"></div>
+    <div id="chkn">5/5</div>
+  </div>
+  <div class="hpbar player">
+    <div class="hpl" style="color:#86efac">🛡 YOU</div>
+    <div class="hpt"><div class="hpf" id="phpf" style="width:100%"></div></div>
+    <div class="hptx" id="phpt">—</div>
+  </div>
+  <div id="logline">Draw your first card to begin...</div>
+  <div id="hand"></div>
+  <div id="abar">
+    <div id="pbadge">DRAW</div>
+    <button class="ab pr" id="mbtn" onclick="mainAct()">Draw Card</button>
+    <button class="ab" onclick="nxtPhase()">Next →</button>
+    <button class="ab" onclick="showSelInfo()">Info</button>
+  </div>
+</div>
+
+<!-- ── WIN ── -->
+<div id="screen-win" class="screen">
+  <div class="ricon" style="color:#fbbf24">🏆</div>
+  <div class="rtit w">VICTORY</div>
+  <div class="rsub">ENEMY DEFEATED</div>
+  <div class="rbox">
+    <div class="rrow">Floor Cleared <span id="rfl">—</span></div>
+    <div class="rrow">HP Remaining <span id="rhp">—</span></div>
+    <div class="rrow">Combos Landed <span id="rcb">—</span></div>
+  </div>
+  <button class="mbtn" onclick="nextFloor()">▶ NEXT FLOOR</button>
+  <button class="mbtn sec" onclick="sv('menu')">🏠 MENU</button>
+</div>
+
+<!-- ── LOSE ── -->
+<div id="screen-lose" class="screen">
+  <div class="ricon" style="color:#ef4444">💀</div>
+  <div class="rtit l">DEFEATED</div>
+  <div class="rsub">YOU HAVE FALLEN</div>
+  <div class="rbox">
+    <div class="rrow">Reached Floor <span id="rfl2">—</span></div>
+    <div class="rrow">Total Combos <span id="rcb2">—</span></div>
+  </div>
+  <button class="mbtn" onclick="startGame()">🔄 RETRY</button>
+  <button class="mbtn sec" onclick="sv('menu')">🏠 MENU</button>
+</div>
+
+</div><!-- /game -->
+
+<!-- ── DECK BUILDER ── -->
+<div id="screen-builder" class="screen">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:18px;gap:12px">
+    <div class="mt" style="font-size:1.6rem">DECK BUILDER</div>
+    <div style="display:flex;gap:12px;width:92%;max-width:980px;">
+      <div style="flex:1;background:rgba(255,255,255,0.03);padding:10px;border-radius:10px;max-height:60vh;overflow:auto">
+        <div style="font-weight:700;margin-bottom:6px;color:#a78bfa">Card Pool</div>
+        <div id="builder-pool" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px"></div>
+      </div>
+      <div style="width:320px;background:rgba(255,255,255,0.03);padding:10px;border-radius:10px;max-height:60vh;overflow:auto">
+        <div style="font-weight:700;margin-bottom:6px;color:#38bdf8">Your Deck <span id="builder-count">0</span>/40</div>
+        <div id="builder-deck" style="display:flex;flex-direction:column;gap:6px"></div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button class="mbtn pr" onclick="saveBuilder()">💾 Save Deck</button>
+          <button class="mbtn" onclick="resetBuilder()">🔁 Reset</button>
+          <button class="mbtn sec" onclick="sv('menu')">🏠 Back</button>
+        </div>
+        <div style="margin-top:8px">
+          <button class="mbtn" onclick="saveBuilder(true)">▶ Start with Deck</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL -->
+<div id="modal" onclick="cMod()">
+<div id="mbox" onclick="event.stopPropagation()">
+  <span class="mic" id="mic">⚔️</span>
+  <div class="mn" id="mn">—</div>
+  <div class="mtp" id="mtp">—</div>
+  <div class="mgr" id="mgr"></div>
+  <div class="mtags" id="mtags"></div>
+  <div class="mfx" id="mfx">—</div>
+  <button class="mbtn" style="width:100%;margin:0;padding:10px;font-size:.95rem" onclick="cMod()">✓ Close</button>
+</div>
+</div>
+
+<div id="tst"></div>
+<div id="tbadge">YOUR TURN</div>
+<div id="cpop"><div class="cplb">⚡ CHASE CHAIN!</div><div class="cpn" id="cpn">×1</div></div>
+
+<script>
+'use strict';
+// ════════════════════════════════════════════════
+//                 CARD DATABASE
+// ════════════════════════════════════════════════
+const DB={
+  // WARRIORS
+  shadow_blade:{id:'shadow_blade',nm:'Shadow Blade',type:'warrior',sub:'effect',
+    atk:1400,def:900,mhp:1800,cost:3,ico:'🗡️',rar:'Rare',
+    trg:['KNOCKBACK'],ch:{STUN:'b300'},
+    fx:'Triggers KNOCKBACK on attack. CHASE [STUN]: +300 bonus damage to target.'},
+  iron_titan:{id:'iron_titan',nm:'Iron Titan',type:'warrior',sub:'guardian',
+    atk:600,def:2000,mhp:2800,cost:4,ico:'🛡️',rar:'Rare',
+    trg:[],ch:{},
+    fx:'REDIRECT: Forces one enemy attack per turn to target this card instead. IMMUNE to instant-destroy effects.'},
+  storm_striker:{id:'storm_striker',nm:'Storm Striker',type:'warrior',sub:'effect',
+    atk:2000,def:600,mhp:1500,cost:3,ico:'⚡',rar:'Common',
+    trg:['LAUNCH'],ch:{},
+    fx:'PIERCE: Ignores DEF position bonus. Always triggers LAUNCH on attack.'},
+  void_walker:{id:'void_walker',nm:'Void Walker',type:'warrior',sub:'effect',
+    atk:1200,def:1100,mhp:1800,cost:3,ico:'👁️',rar:'Uncommon',
+    trg:['STUN'],ch:{KNOCKBACK:'drain200'},
+    fx:'40% chance to STUN target on attack. CHASE [KNOCKBACK]: Drain 200 HP from the target.'},
+  ember_wolf:{id:'ember_wolf',nm:'Ember Wolf',type:'warrior',sub:'effect',
+    atk:1600,def:800,mhp:1700,cost:3,ico:'🐺',rar:'Uncommon',
+    trg:['BURN'],ch:{LAUNCH:'dblburn'},
+    fx:'Applies BURN on attack (150 dmg/turn × 3 turns). CHASE [LAUNCH]: Doubles BURN damage.'},
+  frost_sage:{id:'frost_sage',nm:'Frost Sage',type:'warrior',sub:'effect',
+    atk:900,def:1400,mhp:2000,cost:3,ico:'❄️',rar:'Uncommon',
+    trg:[],ch:{},
+    fx:'ON SUMMON: Heal all friendly warriors 250 HP. PASSIVE: All allies gain +100 DEF.'},
+  thunder_lance:{id:'thunder_lance',nm:'Thunder Lance',type:'warrior',sub:'effect',
+    atk:1800,def:500,mhp:1400,cost:3,ico:'⚡',rar:'Rare',
+    trg:['LAUNCH','INTERRUPT'],ch:{STUN:'xatk'},
+    fx:'Always triggers LAUNCH + INTERRUPT on attack. CHASE [STUN]: This card gains an extra attack.'},
+  night_phantom:{id:'night_phantom',nm:'Night Phantom',type:'warrior',sub:'effect',
+    atk:1300,def:1300,mhp:1600,cost:3,ico:'🌑',rar:'Rare',
+    trg:['INTERRUPT'],ch:{INTERRUPT:'ctr600'},
+    fx:'50% chance to INTERRUPT enemy card effect. CHASE [INTERRUPT]: Counter-attack for 600 dmg.'},
+  crystal_golem:{id:'crystal_golem',nm:'Crystal Golem',type:'warrior',sub:'guardian',
+    atk:700,def:2500,mhp:3000,cost:5,ico:'💎',rar:'Rare',
+    trg:[],ch:{},
+    fx:'ENDURE: First time Crystal Golem would be destroyed, it survives at 100 HP instead.'},
+  dragon_sage:{id:'dragon_sage',nm:'Dragon Sage',type:'warrior',sub:'awakened',
+    atk:1800,def:1000,mhp:2200,cost:4,ico:'🐉',rar:'Legendary',
+    trg:['KNOCKBACK'],ch:{KNOCKBACK:'b300'},canAwaken:true,
+    fx:'AWAKEN: At ≤25% HP, transforms into Dragon Deity (ATK 2800, KNOCKBACK+LAUNCH). Cannot be revived after. CHASE [KNOCKBACK]: +300 bonus damage.'},
+  phantom_blade:{id:'phantom_blade',nm:'Phantom Blade',type:'warrior',sub:'effect',
+    atk:1500,def:900,mhp:1700,cost:3,ico:'👻',rar:'Uncommon',
+    trg:['KNOCKBACK'],ch:{KNOCKBACK:'spl50'},
+    fx:'Deals 50% splash damage to all enemies on attack. CHASE [KNOCKBACK]: Full splash to all enemies.'},
+  wind_dancer:{id:'wind_dancer',nm:'Wind Dancer',type:'warrior',sub:'effect',
+    atk:1100,def:1200,mhp:1900,cost:3,ico:'🌀',rar:'Uncommon',
+    trg:['LAUNCH'],ch:{LAUNCH:'triple'},
+    fx:'DODGE: Avoids first attack each turn. CHASE [LAUNCH]: Attacks 3× at 35% power each hit.'},
+  void_titan:{id:'void_titan',nm:'Void Titan',type:'warrior',sub:'fusion',
+    atk:2600,def:1800,mhp:3500,cost:0,ico:'👾',rar:'Legendary',
+    trg:['KNOCKBACK','LAUNCH','INTERRUPT'],ch:{KNOCKBACK:'b300',STUN:'xatk'},
+    fx:'FUSION MONSTER. Triggers KNOCKBACK+LAUNCH+INTERRUPT. Immune to single-target effects. CHASE [KNOCKBACK]: +300. CHASE [STUN]: Extra attack.'},
+  // JUTSU
+  healing_surge:{id:'healing_surge',nm:'Healing Surge',type:'jutsu',sub:'Continuous',
+    cost:3,ico:'💚',rar:'Uncommon',trg:[],ch:{},
+    fx:'CONTINUOUS: Heal all friendly warriors 200 HP at the start of each of your turns.'},
+  power_surge:{id:'power_surge',nm:'Power Surge',type:'jutsu',sub:'Normal',
+    cost:2,ico:'💥',rar:'Common',trg:[],ch:{},
+    fx:'Select one friendly warrior: that warrior gains +800 ATK for this turn only.'},
+  quick_dodge:{id:'quick_dodge',nm:'Quick Dodge',type:'jutsu',sub:'Quick',
+    cost:1,ico:'💨',rar:'Common',trg:[],ch:{},
+    fx:'QUICK: Can activate on enemy\'s turn. Negates the next attack targeting your warrior.'},
+  inferno_strike:{id:'inferno_strike',nm:'Inferno Strike',type:'jutsu',sub:'Normal',
+    cost:3,ico:'🔥',rar:'Uncommon',trg:[],ch:{},
+    fx:'Deal 1200 damage to one enemy warrior and apply BURN (150 dmg/turn × 3 turns).'},
+  shadow_clone:{id:'shadow_clone',nm:'Shadow Clone',type:'jutsu',sub:'Normal',
+    cost:4,ico:'🌫️',rar:'Rare',trg:[],ch:{},
+    fx:'Summon a copy of your strongest warrior at 60% stats. Clone lasts 3 turns then disappears.'},
+  void_fusion:{id:'void_fusion',nm:'Void Fusion',type:'jutsu',sub:'Fusion',
+    cost:3,ico:'🔮',rar:'Legendary',trg:[],ch:{},
+    fx:'FUSION: Sacrifice your 2 weakest warriors on the field to summon the mighty Void Titan (ATK:2600, DEF:1800, HP:3500).'},
+  // TRAPS
+  shadow_snare:{id:'shadow_snare',nm:'Shadow Snare',type:'trap',sub:'Normal',
+    cost:0,ico:'🕸️',rar:'Common',trg:[],ch:{},
+    fx:'TRIGGER: When an enemy warrior declares an attack, stun that warrior for 1 full turn.'},
+  death_counter:{id:'death_counter',nm:'Death Counter',type:'trap',sub:'Normal',
+    cost:0,ico:'💀',rar:'Uncommon',trg:[],ch:{},
+    fx:'TRIGGER: When one of your warriors is destroyed, deal 1000 damage directly to the enemy.'},
+  chase_burst:{id:'chase_burst',nm:'Chase Burst',type:'trap',sub:'Chase',
+    cost:0,ico:'⚡',rar:'Rare',trg:[],ch:{},
+    fx:'CHASE TRAP: Automatically fires when your chase chain hits 3+. Deals 600 damage to ALL enemies.'},
+  mirror_wall:{id:'mirror_wall',nm:'Mirror Wall',type:'trap',sub:'Continuous',
+    cost:0,ico:'🪞',rar:'Uncommon',trg:[],ch:{},
+    fx:'CONTINUOUS: The first enemy attack each turn is reflected back at the attacker for 50% damage.'},
+};
+
+// ════════════════════════════════════════════════
+//                  GAME STATE
+// ════════════════════════════════════════════════
+let G={};
+const $=id=>document.getElementById(id);
+let BUILDER={ids:[]};
+
+function newSide(hp){return{hp,mhp:hp,chk:5,mchk:5,deck:[],hand:[],w:[null,null,null],st:[null,null,null],gy:[],drawn:false,summoned:false};}
+function newG(){
+  return{floor:1,turn:1,phase:'DRAW',pturn:true,combo:0,cmeter:0,tcombos:0,
+    sel:{hand:null,fslot:null},pending:null,busy:false,
+    p:newSide(8000),e:newSide(6000)};
+}
+
+// ════════════════════════════════════════════════
+//                 DECK BUILDING
+// ════════════════════════════════════════════════
+const PDECK=['shadow_blade','shadow_blade','iron_titan','storm_striker','storm_striker',
+  'void_walker','void_walker','ember_wolf','frost_sage','thunder_lance','night_phantom',
+  'crystal_golem','dragon_sage','phantom_blade','wind_dancer',
+  'healing_surge','power_surge','power_surge','quick_dodge','quick_dodge',
+  'inferno_strike','inferno_strike','shadow_clone','void_fusion',
+  'shadow_snare','shadow_snare','death_counter','death_counter','chase_burst','mirror_wall'];
+
+const EDECKS={
+  aggro:['storm_striker','storm_striker','shadow_blade','shadow_blade','ember_wolf','ember_wolf',
+    'thunder_lance','void_walker','phantom_blade','wind_dancer','power_surge','power_surge',
+    'inferno_strike','inferno_strike','quick_dodge','shadow_snare','shadow_snare',
+    'death_counter','chase_burst','mirror_wall'],
+  control:['iron_titan','crystal_golem','crystal_golem','frost_sage','frost_sage','iron_titan',
+    'void_walker','night_phantom','night_phantom','healing_surge','healing_surge',
+    'quick_dodge','quick_dodge','shadow_snare','shadow_snare','mirror_wall','mirror_wall',
+    'death_counter','death_counter','chase_burst'],
+  combo:['shadow_blade','shadow_blade','thunder_lance','thunder_lance','void_walker','void_walker',
+    'ember_wolf','phantom_blade','wind_dancer','dragon_sage','power_surge','power_surge',
+    'inferno_strike','shadow_snare','death_counter','chase_burst','chase_burst',
+    'mirror_wall','void_walker','ember_wolf'],
+};
+
+function mkInst(id,sc=1){
+  const t=DB[id]; if(!t)return null;
+  const c=JSON.parse(JSON.stringify(t));
+  c.iid=Math.random().toString(36).substr(2,8);
+  c.hp=Math.floor((c.mhp||0)*sc); c.mhp=Math.floor((c.mhp||0)*sc);
+  c.atk=Math.floor((c.atk||0)*sc); c.def=Math.floor((c.def||0)*sc);
+  c.fx2={};c.attacked=false;c.age=0;return c;
+}
+function shuf(a){for(let i=a.length-1;i>0;i--){const j=0|Math.random()*(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+function buildDeck(ids,sc=1){return shuf(ids.map(id=>mkInst(id,sc)));}
+
+// ════════════════════════════════════════════════
+//                  GAME FLOW
+// ════════════════════════════════════════════════
+function startGame(){
+  G=newG();
+  const saved = JSON.parse(localStorage.getItem('ic_custom_deck')||'[]');
+  if(Array.isArray(saved) && saved.length){
+    G.p.deck=buildDeck(saved);
+    toast('Using saved custom deck','nfo');
+  } else {
+    G.p.deck=buildDeck(PDECK);
+  }
+  const sc=1+(G.floor-1)*0.12;
+  const ek=Object.keys(EDECKS)[0];
+  G.e.deck=buildDeck(EDECKS[ek],sc);
+  G.e.hp=Math.floor(6000+(G.floor-1)*600); G.e.mhp=G.e.hp;
+  for(let i=0;i<5;i++)drw('p');
+  for(let i=0;i<5;i++)drw('e');
+  sv('game'); ra(); setPhase('DRAW');
+  badge('YOUR TURN'); log('Draw your first card to start the battle!');
+}
+
+function nextFloor(){
+  G.floor++;
+  const sc=1+(G.floor-1)*0.12;
+  const keys=Object.keys(EDECKS);
+  const ek=keys[Math.min(Math.floor((G.floor-1)/5),keys.length-1)];
+  G.p.w=[null,null,null]; G.p.st=[null,null,null];
+  G.p.chk=G.p.mchk; G.p.drawn=false; G.p.summoned=false;
+  G.p.hp=Math.min(G.p.mhp,G.p.hp+2000);
+  if(G.p.deck.length<5)G.p.deck=buildDeck(PDECK);
+  drw('p'); drw('p');
+  G.e=newSide(Math.floor(6000+(G.floor-1)*600));
+  G.e.deck=buildDeck(EDECKS[ek],sc);
+  for(let i=0;i<5;i++)drw('e');
+  G.phase='DRAW'; G.pturn=true; G.combo=0; G.cmeter=0;
+  G.sel={hand:null,fslot:null}; G.pending=null; G.busy=false;
+  sv('game'); ra(); setPhase('DRAW');
+  badge('YOUR TURN'); log(`Floor ${G.floor}! New enemy approaches — archetype: ${ek.toUpperCase()}`);
+}
+
+function drw(who){
+  const s=G[who]; if(!s.deck.length||s.hand.length>=8)return false;
+  s.hand.push(s.deck.pop()); return true;
+}
+
+function setPhase(ph){
+  G.phase=ph;
+  const lb={DRAW:'DRAW PHASE',MAIN:'MAIN PHASE',BATTLE:'BATTLE PHASE',END:'END PHASE'};
+  $('pbadge').textContent=lb[ph]||ph;
+  const mb=$('mbtn');
+  if(ph==='DRAW'){mb.textContent=G.p.drawn?'✓ Drawn':'Draw Card';mb.disabled=G.p.drawn;}
+  else if(ph==='MAIN'){mb.textContent='Play Card';mb.disabled=false;}
+  else if(ph==='BATTLE'){mb.textContent='⚔ Attack';mb.disabled=false;}
+  else{mb.textContent='End Turn';mb.disabled=false;}
+  ra();
+}
+
+function mainAct(){
+  if(!G.pturn||G.busy)return;
+  if(G.phase==='DRAW'&&!G.p.drawn){
+    drw('p'); G.p.drawn=true; log('Card drawn.'); setPhase('MAIN'); ra();
+  } else if(G.phase==='MAIN'){
+    if(G.sel.hand!==null)tryPlay();
+    else toast('Select a card from your hand first!','nfo');
+  } else if(G.phase==='BATTLE'){
+    if(G.pending&&G.pending.type==='attack')
+      toast('Now tap an enemy warrior — or enemy zone for direct attack!','nfo');
+    else if(G.sel.fslot!==null)initAtk();
+    else toast('Select your warrior on the field, then tap an enemy!','nfo');
+  }
+}
+
+function nxtPhase(){
+  if(!G.pturn||G.busy)return;
+  const ord=['DRAW','MAIN','BATTLE','END'];
+  if(G.phase==='DRAW'&&!G.p.drawn){drw('p');G.p.drawn=true;}
+  const idx=ord.indexOf(G.phase);
+  if(G.phase==='END'||idx>=ord.length-1){eot('p');startEnemyTurn();}
+  else setPhase(ord[idx+1]);
+}
+
+// ════════════════════════════════════════════════
+//               PLAYING CARDS
+// ════════════════════════════════════════════════
+function tryPlay(){
+  if(G.sel.hand===null)return;
+  const c=G.p.hand[G.sel.hand];
+  if(!c)return;
+  if(c.type==='warrior')doSummon(c);
+  else if(c.type==='jutsu')doJutsu(c);
+  else if(c.type==='trap')doTrap(c);
+}
+
+function rmHand(who,card){
+  const h=G[who].hand;
+  const i=h.findIndex(c=>c.iid===card.iid);
+  if(i!==-1)h.splice(i,1);
+  if(who==='p')G.sel.hand=null;
+}
+
+function emptyS(who,zone){return G[who][zone].findIndex(s=>s===null);}
+
+function doSummon(c){
+  if(G.p.summoned&&c.sub!=='fusion'){toast('Already summoned a warrior this turn!','nfo');return;}
+  if(G.p.chk<c.cost){toast(`Need ${c.cost} 💧 chakra! You have ${G.p.chk}.`,'nfo');return;}
+  const s=emptyS('p','w');
+  if(s===-1){toast('All warrior zones are full!','nfo');return;}
+  G.p.chk-=c.cost; rmHand('p',c); G.p.w[s]=c;
+  if(c.sub!=='fusion')G.p.summoned=true;
+  if(c.id==='frost_sage'){healAll('p',250);toast('❄️ Frost Sage heals all allies 250 HP!','hl');}
+  log(`You summoned ${c.nm}!`); ra();
+  // small summon animation on the slot
+  setTimeout(()=>{
+    const slotEl=$("pw"+s);
+    if(slotEl){const cardEl=slotEl.querySelector('.fc, .card'); if(cardEl){cardEl.classList.add('anim-summon'); setTimeout(()=>cardEl.classList.remove('anim-summon'),900);}}
+  },40);
+}
+
+function doJutsu(c){
+  if(G.p.chk<c.cost){toast(`Need ${c.cost} 💧 chakra!`,'nfo');return;}
+  if(c.id==='power_surge'){
+    if(!G.p.w.some(w=>w)){toast('No warriors on field to boost!','nfo');return;}
+    G.p.chk-=c.cost; rmHand('p',c);
+    G.pending={type:'power_surge'};
+    toast('💥 Select your warrior to power up!','nfo'); ra(); return;
+  }
+  if(c.id==='inferno_strike'){
+    if(!G.e.w.some(w=>w)){toast('No enemy warriors to target!','nfo');return;}
+    G.p.chk-=c.cost; rmHand('p',c);
+    G.pending={type:'inferno_strike'};
+    toast('🔥 Select an enemy warrior!','nfo'); ra(); return;
+  }
+  if(c.id==='shadow_clone'){
+    const ws=G.p.w.filter(w=>w);
+    if(!ws.length){toast('No warriors to clone!','nfo');return;}
+    const fs=emptyS('p','w');
+    if(fs===-1){toast('No empty warrior slots!','nfo');return;}
+    G.p.chk-=c.cost; rmHand('p',c);
+    const src=ws.reduce((a,b)=>a.atk>b.atk?a:b);
+    const cl=mkInst(src.id);
+    cl.atk=Math.floor(cl.atk*.6); cl.mhp=Math.floor(cl.mhp*.6); cl.hp=cl.mhp;
+    cl.nm='[Clone] '+cl.nm; cl.ico='🌫️'; cl.isClone=true; cl.cloneTurns=3;
+    G.p.w[fs]=cl; log('Shadow Clone deployed!'); toast('🌫️ Clone summoned!','hl'); ra(); return;
+  }
+  if(c.id==='void_fusion'){
+    const slots=[]; G.p.w.forEach((w,i)=>{if(w)slots.push(i);});
+    if(slots.length<2){toast('Need 2 warriors on field to fuse!','nfo');return;}
+    G.p.chk-=c.cost; rmHand('p',c);
+    slots.sort((a,b)=>G.p.w[a].atk-G.p.w[b].atk);
+    G.p.w[slots[0]]=null; G.p.w[slots[1]]=null;
+    const titan=mkInst('void_titan');
+    const fs2=emptyS('p','w');
+    G.p.w[fs2!==-1?fs2:slots[0]]=titan;
+    log('VOID FUSION! Void Titan emerges!'); toast('👾 VOID TITAN SUMMONED!','ul'); ra(); return;
+  }
+  if(c.id==='healing_surge'){
+    const ss=emptyS('p','st');
+    if(ss===-1){toast('Spell/Trap zone full!','nfo');return;}
+    G.p.chk-=c.cost; rmHand('p',c); G.p.st[ss]=c;
+    toast('💚 Healing Surge is now active!','hl'); ra(); return;
+  }
+  if(c.id==='quick_dodge'){
+    G.p.chk-=c.cost; rmHand('p',c);
+    G.p.w.forEach(w=>{if(w)w.fx2.dodge=true;});
+    toast('💨 Quick Dodge! Next attack negated!','hl'); ra(); return;
+  }
+  G.p.chk-=c.cost; rmHand('p',c); ra();
+}
+
+function doTrap(c){
+  const ss=emptyS('p','st');
+  if(ss===-1){toast('Spell/Trap zone full!','nfo');return;}
+  const t={...c,faceDown:true}; G.p.st[ss]=t; rmHand('p',c);
+  log('Trap set face-down.'); toast('🕸️ Trap set!','nfo'); ra();
+}
+
+// ════════════════════════════════════════════════
+//                BATTLE SYSTEM
+// ════════════════════════════════════════════════
+function initAtk(){
+  if(G.sel.fslot===null)return;
+  const atk=G.p.w[G.sel.fslot];
+  if(!atk){toast('Select a warrior on the field!','nfo');return;}
+  if(atk.attacked){toast(`${atk.nm} already attacked this turn!`,'nfo');return;}
+  if(atk.fx2.stun){toast(`${atk.nm} is stunned!`,'nfo');return;}
+  G.pending={type:'attack',atk,as:G.sel.fslot};
+  toast(`${atk.nm} ready! Tap an enemy warrior or enemy zone.`,'nfo'); ra();
+}
+
+function execAtk(atk,as,tgt,ts){
+  if(G.busy)return; G.busy=true;
+  setTimeout(()=>{
+    // visual attack pulse for attacker and target
+    try{
+      const aEl=$('pw'+as)?.querySelector('.fc, .card');
+      const tEl=(typeof ts==='number'&&ts>=0)?$('ew'+ts)?.querySelector('.fc, .card'):null;
+      if(aEl){aEl.classList.add('anim-attack'); setTimeout(()=>aEl.classList.remove('anim-attack'),600);}
+      if(tEl){tEl.classList.add('anim-attack'); setTimeout(()=>tEl.classList.remove('anim-attack'),600);}
+    }catch(e){}
+    // Mirror wall check
+    let mf=false;
+    G.p.st.forEach((st,i)=>{
+      if(st&&st.id==='mirror_wall'&&!mf){
+        const r=Math.floor(atk.atk*.5); atk.hp-=r; mf=true;
+        toast(`🪞 Mirror Wall reflects ${r} dmg!`,'hl'); log('Mirror Wall activated!');
+        if(atk.hp<=0){destroy('e','w',G.e.w.findIndex(w=>w&&w.iid===atk.iid));G.busy=false;G.pending=null;chkEnd();ra();return;}
+      }
+    });
+    if(mf&&atk.hp<=0){G.busy=false;G.pending=null;chkEnd();ra();return;}
+    // Shadow snare check
+    let sn=false;
+    G.p.st.forEach((st,i)=>{
+      if(st&&st.id==='shadow_snare'&&!sn){
+        setSt(atk,'stun',1); G.p.st[i]=null; sn=true;
+        toast('🕸️ Shadow Snare! Attacker stunned!','hl');
+      }
+    });
+    if(sn){atk.attacked=true;G.busy=false;G.pending=null;G.sel.fslot=null;ra();return;}
+    // Damage calc
+    let dmg;
+    const pierce=atk.trg&&atk.trg.includes('LAUNCH');
+    if(tgt){
+      const dv=pierce?0:Math.floor(tgt.def*.5); dmg=Math.max(100,atk.atk-dv);
+      tgt.hp-=dmg;
+      toast(`⚔️ ${atk.nm} → ${tgt.nm}: -${dmg}`,'dmg'); log(`${atk.nm} attacks ${tgt.nm} for ${dmg}!`);
+      atkFx(atk,tgt,ts,'e',dmg);
+      if(tgt.hp<=0)destroy('e','w',ts);
+    } else {
+      dmg=Math.floor(atk.atk*.8); G.e.hp=Math.max(0,G.e.hp-dmg);
+      toast(`💥 Direct hit! Enemy loses ${dmg} HP`,'dmg'); log(`${atk.nm} attacks directly for ${dmg}!`);
+    }
+    atk.attacked=true;
+    // Chase resolution
+    const trigs=new Set(atk.trg||[]);
+    if(tgt&&tgt.fx2.stun)trigs.add('STUN');
+    resolveChase(atk,trigs,tgt,ts);
+    G.busy=false; G.pending=null; G.sel.fslot=null;
+    chkEnd(); ra();
+  },280);
+}
+
+function atkFx(src,tgt,ts,tw,dmg){
+  const trg=src.trg||[];
+  if(trg.includes('KNOCKBACK')){tgt.fx2.knockback=true;}
+  if(trg.includes('STUN')&&Math.random()<0.4){setSt(tgt,'stun',1);toast(`💫 ${tgt.nm} STUNNED!`,'ch');}
+  if(trg.includes('BURN')){tgt.fx2.burn={d:150,t:3};toast(`🔥 ${tgt.nm} is BURNING!`,'dmg');}
+  if(trg.includes('LAUNCH')){tgt.fx2.launched=true;}
+  if(trg.includes('INTERRUPT')&&Math.random()<0.5){toast('⚡ INTERRUPT! Enemy effect negated!','ch');}
+  // Phantom Blade splash
+  if(src.id==='phantom_blade'){
+    G.e.w.forEach((w,i)=>{if(w&&i!==ts){const s=Math.floor(dmg*.5);w.hp-=s;if(w.hp<=0)destroy('e','w',i);}});
+  }
+  // Awakening
+  if(tgt&&tgt.canAwaken&&!tgt.fx2.awakened&&tgt.hp>0&&tgt.hp<=tgt.mhp*.25){
+    tgt.fx2.awakened=true; tgt.atk=2800; tgt.nm='Dragon Deity'; tgt.ico='🔥🐉';
+    tgt.trg=['KNOCKBACK','LAUNCH']; tgt.hp=Math.floor(tgt.mhp*.5);
+    toast('🐉 DRAGON DEITY AWAKENS! ATK: 2800!','ul');
+  }
+}
+
+function resolveChase(src,trigs,tgt,ts){
+  const allies=G.p.w.filter(w=>w&&w.iid!==src.iid&&!w.fx2.stun);
+  const chains=[];
+  allies.forEach(ally=>{
+    const ch=ally.ch||{};
+    for(const tg of trigs){if(ch[tg])chains.push({ally,tg,fx:ch[tg]});}
+  });
+  // Chase burst trap check
+  if(chains.length>=2){
+    G.p.st.forEach((st,i)=>{
+      if(st&&st.id==='chase_burst'){
+        G.e.hp=Math.max(0,G.e.hp-600);
+        toast('⚡ CHASE BURST fires! 600 AoE!','ul'); G.p.st[i]=null;
+      }
+    });
+  }
+  if(!chains.length)return;
+  chains.forEach((ch,idx)=>{
+    setTimeout(()=>{
+      G.combo++; G.cmeter=Math.min(100,G.cmeter+22); G.tcombos++;
+      showChain(idx+1);
+      const fx=ch.fx; let cdmg=0;
+      if(fx==='b300'){
+        cdmg=300; if(tgt)tgt.hp-=cdmg; else G.e.hp=Math.max(0,G.e.hp-cdmg);
+        toast(`⚡ CHASE [${ch.tg}] ${ch.ally.nm}: +300 bonus!`,'ch');
+      } else if(fx==='drain200'){
+        cdmg=200; if(tgt)tgt.hp-=cdmg;
+        G.p.hp=Math.min(G.p.mhp,G.p.hp+cdmg);
+        toast(`💜 CHASE DRAIN: ${ch.ally.nm} drains 200 HP!`,'ch');
+      } else if(fx==='dblburn'){
+        if(tgt&&tgt.fx2.burn)tgt.fx2.burn.d*=2;
+        toast(`🔥 CHASE DOUBLE BURN: ${ch.ally.nm}!`,'ch');
+      } else if(fx==='xatk'){
+        cdmg=Math.floor(ch.ally.atk*.6);
+        if(tgt)tgt.hp-=cdmg; else G.e.hp=Math.max(0,G.e.hp-cdmg);
+        toast(`⚡ CHASE EXTRA ATK: ${ch.ally.nm} +${cdmg}!`,'ch');
+      } else if(fx==='ctr600'){
+        G.e.hp=Math.max(0,G.e.hp-600);
+        toast(`💥 CHASE COUNTER: ${ch.ally.nm} fires back 600!`,'ch');
+      } else if(fx==='triple'){
+        cdmg=Math.floor(ch.ally.atk*.35)*3;
+        if(tgt)tgt.hp-=cdmg; else G.e.hp=Math.max(0,G.e.hp-cdmg);
+        toast(`🌀 CHASE TRIPLE: ${ch.ally.nm} hits 3 times!`,'ch');
+      } else if(fx==='spl50'){
+        G.e.w.forEach((w,i)=>{if(w){const s=Math.floor(ch.ally.atk*.5);w.hp-=s;if(w.hp<=0)destroy('e','w',i);}});
+        toast(`👻 CHASE SPLASH: ${ch.ally.nm} hits all!`,'ch');
+      }
+      log(`Chain ×${idx+1}: ${ch.ally.nm} chases [${ch.tg}]!`);
+      if(tgt&&tgt.hp<=0)destroy('e','w',ts);
+      G.e.hp=Math.max(0,G.e.hp);
+      if(G.cmeter>=100)setTimeout(comboUlt,300);
+      chkEnd(); ra();
+    },(idx+1)*720);
+  });
+}
+
+function comboUlt(){
+  G.cmeter=0; let tot=0;
+  G.p.w.forEach(w=>{if(w&&!w.fx2.stun)tot+=Math.floor(w.atk*.5);});
+  G.e.hp=Math.max(0,G.e.hp-tot);
+  toast(`⚡⚡ COMBO ULTIMATE! Your team deals ${tot} total!`,'ul');
+  log('COMBO ULTIMATE UNLEASHED!'); chkEnd(); ra();
+}
+
+function destroy(who,zone,slot){
+  const c=G[who][zone][slot]; if(!c)return;
+  // Endure
+  if(c.id==='crystal_golem'&&!c.fx2.endured){c.hp=100;c.fx2.endured=true;toast('💎 ENDURE! Crystal Golem survives at 100!','hl');return;}
+  // Death counter trap
+  if(who==='p'){
+    G.p.st.forEach((st,i)=>{
+      if(st&&st.id==='death_counter'){G.e.hp=Math.max(0,G.e.hp-1000);toast('💀 DEATH COUNTER! 1000 damage!','dmg');G.p.st[i]=null;}
+    });
+  }
+  G[who].gy.push(c); G[who][zone][slot]=null; log(`${c.nm} is destroyed!`);
+}
+
+function healAll(who,amt){G[who].w.forEach(w=>{if(w)w.hp=Math.min(w.mhp,w.hp+amt);});}
+function setSt(c,k,v){if(c)c.fx2[k]=v;}
+
+// ════════════════════════════════════════════════
+//                END OF TURN
+// ════════════════════════════════════════════════
+function eot(who){
+  const s=G[who];
+  s.st.forEach(st=>{if(st&&st.id==='healing_surge')healAll(who,200);});
+  s.w.forEach((w,i)=>{
+    if(!w)return;
+    if(w.fx2.burn){w.hp-=w.fx2.burn.d;w.fx2.burn.t--;if(w.fx2.burn.t<=0)delete w.fx2.burn;if(w.hp<=0)destroy(who,'w',i);}
+    if(w.fx2.stun>0){w.fx2.stun--;if(w.fx2.stun<=0)delete w.fx2.stun;}
+    delete w.fx2.knockback; delete w.fx2.launched; delete w.fx2.dodge;
+    if(w.isClone){w.cloneTurns--;if(w.cloneTurns<=0)destroy(who,'w',i);}
+    w.attacked=false; w.age++;
+    if(w.id==='iron_titan')delete w.fx2.redirected;
+  });
+  s.chk=s.mchk; s.drawn=false; s.summoned=false;
+}
+
+// ════════════════════════════════════════════════
+//                  ENEMY AI
+// ════════════════════════════════════════════════
+function startEnemyTurn(){
+  G.pturn=false; G.phase='ENEMY'; G.sel={hand:null,fslot:null}; G.pending=null;
+  G.turn++;
+  badge('ENEMY TURN'); log('Enemy is planning...');
+  setTimeout(()=>{drw('e');setTimeout(eiPlay,900);},700);
+}
+
+function eiPlay(){
+  const hand=G.e.hand; let played=false;
+  // Try warrior first, then jutsu, then trap
+  for(let tries=0;tries<8&&!played;tries++){
+    const warriors=hand.filter(c=>c.type==='warrior');
+    const jutsus=hand.filter(c=>c.type==='jutsu');
+    const traps=hand.filter(c=>c.type==='trap');
+    const order=[...warriors,...jutsus,...traps];
+    if(!order.length)break;
+    const c=order[0]; const idx=hand.indexOf(c);
+    if(c.type==='warrior'){
+      const ss=emptyS('e','w');
+      if(ss!==-1&&G.e.chk>=c.cost){
+        G.e.chk-=c.cost; hand.splice(idx,1);
+        if(c.id==='frost_sage')healAll('e',250);
+        G.e.w[ss]=c; log(`Enemy summons ${c.nm}!`); played=true;
+      } else break;
+    } else if(c.type==='jutsu'&&G.e.chk>=c.cost){
+      G.e.chk-=c.cost; hand.splice(idx,1);
+      if(c.id==='healing_surge'){const ss=emptyS('e','st');if(ss!==-1)G.e.st[ss]=c;}
+      else if(c.id==='power_surge'){const ws=G.e.w.filter(w=>w);if(ws.length){const t=ws.reduce((a,b)=>a.atk>b.atk?a:b);t.atk+=800;t.fx2.powered=true;}}
+      else if(c.id==='inferno_strike'){
+        let bi=-1,bh=0;
+        G.p.w.forEach((w,i)=>{if(w&&w.hp>bh){bh=w.hp;bi=i;}});
+        if(bi!==-1){G.p.w[bi].hp-=1200;G.p.w[bi].fx2.burn={d:150,t:3};toast(`🔥 Enemy: Inferno Strike on ${G.p.w[bi].nm}!`,'dmg');if(G.p.w[bi].hp<=0)destroy('p','w',bi);}
+      }
+      log(`Enemy activates ${c.nm}!`); played=true;
+    } else if(c.type==='trap'){
+      const ss=emptyS('e','st');
+      if(ss!==-1){G.e.st[ss]={...c,faceDown:true};hand.splice(idx,1);played=true;}
+    } else break;
+  }
+  ra(); setTimeout(eiAtk,900);
+}
+
+function eiAtk(){
+  const atkrs=G.e.w.filter(w=>w&&!w.attacked&&!w.fx2.stun);
+  if(!atkrs.length){eot('e');endETurn();return;}
+  let i=0;
+  function nxt(){
+    if(i>=atkrs.length){eot('e');endETurn();return;}
+    const atk=atkrs[i++];
+    // Mirror wall
+    let mf=false;
+    G.p.st.forEach((st,si)=>{
+      if(st&&st.id==='mirror_wall'&&!mf){
+        const r=Math.floor(atk.atk*.5); atk.hp-=r; mf=true;
+        toast(`🪞 Mirror Wall reflects ${r}!`,'hl');
+        if(atk.hp<=0){const as=G.e.w.findIndex(w=>w&&w.iid===atk.iid);destroy('e','w',as);ra();setTimeout(nxt,700);return;}
+      }
+    });
+    if(mf&&atk.hp<=0){ra();setTimeout(nxt,700);return;}
+    // Snare
+    let sn=false;
+    G.p.st.forEach((st,si)=>{
+      if(st&&st.id==='shadow_snare'&&!sn){setSt(atk,'stun',1);G.p.st[si]=null;sn=true;toast('🕸️ Shadow Snare! Enemy stunned!','hl');}
+    });
+    if(sn){ra();setTimeout(nxt,700);return;}
+    // Iron Titan redirect
+    let tgt=null,ts=-1;
+    const titSlot=G.p.w.findIndex(w=>w&&w.id==='iron_titan'&&!w.fx2.redirected);
+    if(titSlot!==-1){tgt=G.p.w[titSlot];ts=titSlot;tgt.fx2.redirected=true;toast('🛡️ Iron Titan redirects attack!','hl');}
+    else{let mh=Infinity;G.p.w.forEach((w,wi)=>{if(w&&w.hp<mh){mh=w.hp;ts=wi;tgt=w;}});}
+    let dmg;
+    if(tgt){
+      const pierce=atk.trg&&atk.trg.includes('LAUNCH');
+      dmg=Math.max(100,Math.floor(atk.atk-(pierce?0:tgt.def*.5)));
+      tgt.hp-=dmg;
+      toast(`⚔️ Enemy: ${atk.nm} → ${tgt.nm}: -${dmg}`,'dmg');
+      log(`Enemy ${atk.nm} hits ${tgt.nm} for ${dmg}!`);
+      atkFxE(atk,tgt,ts,dmg);
+      if(tgt.hp<=0)destroy('p','w',ts);
+    } else {
+      dmg=Math.floor(atk.atk*.8); G.p.hp=Math.max(0,G.p.hp-dmg);
+      toast(`💥 Enemy direct attack! You lose ${dmg} HP`,'dmg');
+      log(`Enemy ${atk.nm} attacks you directly for ${dmg}!`);
+    }
+    atk.attacked=true;
+    resolveEChase(atk,tgt,ts);
+    ra(); if(!chkEnd())setTimeout(nxt,950);
+  }
+  nxt();
+}
+
+function atkFxE(src,tgt,ts,dmg){
+  if(src.trg&&src.trg.includes('STUN')&&Math.random()<0.4){setSt(tgt,'stun',1);toast(`💫 ${tgt.nm} stunned!`,'dmg');}
+  if(src.trg&&src.trg.includes('BURN')){tgt.fx2.burn={d:150,t:3};toast(`🔥 ${tgt.nm} is burning!`,'dmg');}
+}
+
+function resolveEChase(src,tgt,ts){
+  const trigs=new Set(src.trg||[]);
+  G.e.w.forEach(ally=>{
+    if(!ally||ally.iid===src.iid||ally.fx2.stun)return;
+    const ch=ally.ch||{};
+    for(const tg of trigs){
+      if(ch[tg]){
+        const fx=ch[tg];
+        if(fx==='b300'){const c=300;if(tgt)tgt.hp-=c;else G.p.hp=Math.max(0,G.p.hp-c);toast(`⚡ Enemy chase! ${ally.nm} +300!`,'dmg');}
+        else if(fx==='drain200'){const c=200;if(tgt)tgt.hp-=c;G.e.hp=Math.min(G.e.mhp,G.e.hp+c);toast(`💜 Enemy drain! ${ally.nm}!`,'dmg');}
+        else if(fx==='xatk'){const c=Math.floor(ally.atk*.6);if(tgt)tgt.hp-=c;else G.p.hp=Math.max(0,G.p.hp-c);toast(`⚡ Enemy extra atk! ${ally.nm} +${c}!`,'dmg');}
+        G.p.hp=Math.max(0,G.p.hp);
+        if(tgt&&tgt.hp<=0)destroy('p','w',ts);
+      }
+    }
+  });
+}
+
+function endETurn(){
+  G.pturn=true; G.phase='DRAW'; G.p.drawn=false; G.p.summoned=false; G.p.chk=G.p.mchk;
+  G.sel={hand:null,fslot:null}; G.pending=null; G.busy=false;
+  badge('YOUR TURN'); log('Your turn!'); setPhase('DRAW'); ra();
+}
+
+// ════════════════════════════════════════════════
+//               WIN / LOSE
+// ════════════════════════════════════════════════
+function chkEnd(){
+  if(G.e.hp<=0){endBattle(true);return true;}
+  if(G.p.hp<=0){endBattle(false);return true;}
+  return false;
+}
+
+function endBattle(won){
+  G.busy=true;
+  setTimeout(()=>{
+    if(won){
+      $('rfl').textContent=G.floor; $('rhp').textContent=G.p.hp; $('rcb').textContent=G.tcombos;
+      sv('win');
+    } else {
+      $('rfl2').textContent=G.floor; $('rcb2').textContent=G.tcombos;
+      sv('lose');
+    }
+  },700);
+}
+
+// ════════════════════════════════════════════════
+//               ZONE CLICK HANDLER
+// ════════════════════════════════════════════════
+function zc(who,zone,slot){
+  if(G.busy)return;
+  const c=G[who][zone][slot];
+  // Resolve pending actions
+  if(G.pending){
+    const pa=G.pending;
+    if(pa.type==='attack'){
+      if(who==='e'&&zone==='w'){
+        if(c){execAtk(pa.atk,pa.as,c,slot);}
+        else if(!G.e.w.some(w=>w)){execAtk(pa.atk,pa.as,null,-1);}
+        else toast('Defeat enemy warriors first!','nfo');
+        return;
+      }
+      if(who==='e'&&zone==='st'){
+        if(!G.e.w.some(w=>w)){execAtk(pa.atk,pa.as,null,-1);}
+        else toast('Defeat all enemy warriors first!','nfo');
+        return;
+      }
+    }
+    if(pa.type==='power_surge'&&who==='p'&&zone==='w'&&c){
+      c.atk+=800; c.fx2.powered=true;
+      toast(`💥 ${c.nm} boosted +800 ATK this turn!`,'hl');
+      G.pending=null; ra(); return;
+    }
+    if(pa.type==='inferno_strike'&&who==='e'&&zone==='w'&&c){
+      c.hp-=1200; c.fx2.burn={d:150,t:3};
+      toast(`🔥 Inferno Strike! ${c.nm} -1200 HP + BURN!`,'dmg');
+      if(c.hp<=0)destroy('e','w',slot);
+      G.pending=null; chkEnd(); ra(); return;
+    }
+    return;
+  }
+  // BATTLE phase: select own warrior
+  if(G.phase==='BATTLE'&&who==='p'&&zone==='w'&&c&&G.pturn){
+    if(c.attacked){toast(`${c.nm} already attacked!`,'nfo');return;}
+    if(c.fx2.stun){toast(`${c.nm} is stunned this turn!`,'nfo');return;}
+    G.sel.fslot=slot;
+    G.pending={type:'attack',atk:c,as:slot};
+    toast(`${c.nm} ready! Tap an enemy to attack.`,'nfo'); ra(); return;
+  }
+  // BATTLE phase: attack enemy
+  if(G.phase==='BATTLE'&&who==='e'&&G.pending&&G.pending.type==='attack'){
+    const hasW=G.e.w.some(w=>w);
+    if(zone==='w'&&c){execAtk(G.pending.atk,G.pending.as,c,slot);return;}
+    if(!hasW){execAtk(G.pending.atk,G.pending.as,null,-1);return;}
+    toast('Must defeat all enemy warriors before direct attack!','nfo'); return;
+  }
+  // Show card info
+  if(c&&!(c.faceDown&&who==='e'))showMod(c);
+}
+
+// ════════════════════════════════════════════════
+//                   RENDERING
+// ════════════════════════════════════════════════
+function ra(){
+  renderHP(); renderChk(); renderField(); renderHand(); renderCombo();
+  $('flrl').textContent=`FLOOR ${G.floor}`;
+  const ech='●'.repeat(G.e.chk)+'○'.repeat(Math.max(0,G.e.mchk-G.e.chk));
+  $('einf').textContent=`Deck: ${G.e.deck.length} | Hand: ${G.e.hand.length} | ${ech}`;
+}
+
+function renderHP(){
+  const ep=Math.max(0,G.e.hp/G.e.mhp*100), pp=Math.max(0,G.p.hp/G.p.mhp*100);
+  $('ehpf').style.width=ep+'%'; $('phpf').style.width=pp+'%';
+  $('ehpt').textContent=`${Math.max(0,G.e.hp)} / ${G.e.mhp}`;
+  $('phpt').textContent=`${Math.max(0,G.p.hp)} / ${G.p.mhp}`;
+}
+
+function renderChk(){
+  const pips=$('pips'); pips.innerHTML='';
+  for(let i=0;i<G.p.mchk;i++){
+    const d=document.createElement('div');
+    d.className='pip'+(i<G.p.chk?' on':''); pips.appendChild(d);
+  }
+  $('chkn').textContent=`${G.p.chk}/${G.p.mchk}`;
+}
+
+function renderField(){
+  ['p','e'].forEach(who=>{
+    [0,1,2].forEach(i=>{
+      const ws=$(who+'w'+i); ws.innerHTML='';
+      const wc=G[who].w[i];
+      let cls='ws';
+      if(who==='e'&&G.pending?.type==='attack'&&wc)cls+=' te';
+      if(who==='p'&&G.pending?.type==='attack'&&G.p.w[i]&&!G.p.w[i].attacked)cls+=' tp';
+      if(who==='p'&&G.pending?.type==='power_surge'&&wc)cls+=' tp';
+      if(who==='e'&&G.pending?.type==='inferno_strike'&&wc)cls+=' te';
+      ws.className=cls;
+      if(wc)ws.appendChild(mkFCard(wc,who==='p'&&G.pending?.as===i&&G.pending?.type==='attack'));
+      const ss=$(who+'st'+i); ss.innerHTML='';
+      const sc=G[who].st[i];
+      ss.className='ss';
+      if(sc)ss.appendChild(mkCCard(sc,who));
+    });
+  });
+  const haEW=G.e.w.some(w=>w);
+  $('estr').style.boxShadow=(G.pending?.type==='attack'&&!haEW)?'inset 0 0 14px #dc262655':'none';
+}
+
+function mkFCard(c,sel){
+  const el=document.createElement('div');
+  const sub=c.sub||'effect';
+  const tclass=c.type==='warrior'?'cw '+(c.sub||'effect'):(c.type==='jutsu'?'cj':'ct');
+  el.className=`card fc ${tclass}${sel?' sel':''}`;
+  const hp=c.mhp?Math.max(0,c.hp/c.mhp*100):100;
+  const sts=[];
+  if(c.fx2.stun)sts.push('<span class="si">💫</span>');
+  if(c.fx2.burn)sts.push('<span class="si">🔥</span>');
+  if(c.fx2.powered)sts.push('<span class="si" style="color:#fbbf24">▲</span>');
+  if(c.fx2.awakened)sts.push('<span class="si" style="color:#e879f9">★</span>');
+  const stats=c.mhp?`<span>⚔${c.atk}</span><span>🛡${c.def}</span>`:`<span>${c.sub||c.type}</span>`;
+  el.innerHTML=`
+    <div class="ccst">${c.cost||0}</div>
+    ${sts.length?`<div class="cst">${sts.join('')}</div>`:''}
+    <div class="ci">${c.ico||'?'}</div>
+    <div class="cn">${c.nm}</div>
+    <div class="cs">${stats}</div>
+    ${c.mhp?`<div class="chb"><div class="chf" style="width:${hp}%"></div></div>`:''}
+  `;
+  return el;
+}
+
+function mkCCard(c,who){
+  const el=document.createElement('div');
+  if(c.faceDown&&who==='e'){
+    el.className='cc cfd';
+    el.innerHTML='<span class="ci">❓</span><div class="cni"><div class="cn">Face Down</div><div class="ct2">Set Card</div></div>';
+    return el;
+  }
+  const tclass=c.type==='warrior'?'cw '+(c.sub||'effect'):(c.type==='jutsu'?'cj':'ct');
+  el.className=`cc ${tclass}`;
+  el.innerHTML=`<span class="ci">${c.ico||'?'}</span><div class="cni"><div class="cn">${c.nm}</div><div class="ct2">${c.sub||''} ${c.type}</div></div>`;
+  return el;
+}
+
+function renderHand(){
+  const h=$('hand'); h.innerHTML='';
+  G.p.hand.forEach((c,i)=>{
+    const el=document.createElement('div');
+    const tclass=c.type==='warrior'?'cw '+(c.sub||'effect'):(c.type==='jutsu'?'cj':'ct');
+    el.className=`card hc ${tclass}${G.sel.hand===i?' sel':''}`;
+    if(G.p.chk<c.cost)el.style.opacity='.48';
+    const stats=c.mhp?`<span>⚔${c.atk}</span><span>💧${c.cost}</span>`:`<span>${c.type}</span><span>💧${c.cost}</span>`;
+    el.innerHTML=`
+      <div class="ccst">${c.cost||0}</div>
+      <div class="ci">${c.ico||'?'}</div>
+      <div class="cn">${c.nm}</div>
+      <div class="cs">${stats}</div>
+      ${c.mhp?`<div class="chb"><div class="chf" style="width:100%"></div></div>`:''}
+    `;
+    el.onclick=()=>selHand(i);
+    h.appendChild(el);
+  });
+}
+
+function selHand(i){
+  if(!G.pturn||G.busy)return;
+  if(G.phase==='BATTLE'){toast('Cannot play cards during Battle Phase!','nfo');return;}
+  if(G.sel.hand===i){tryPlay();}
+  else{G.sel.hand=i;const c=G.p.hand[i];toast(`${c.nm} selected — tap again or press Play Card.`,'nfo');}
+  renderHand();
+}
+
+function renderCombo(){
+  $('cmbf').style.width=G.cmeter+'%';
+  $('cmbp').textContent=G.cmeter+'%';
+}
+
+// ════════════════════════════════════════════════
+//                    UI
+// ════════════════════════════════════════════════
+function sv(nm){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  $('screen-'+nm).classList.add('active');
+}
+
+function toast(msg,type='nfo'){
+  const c=$('tst');
+  const el=document.createElement('div');
+  el.className='toast '+type; el.textContent=msg; c.appendChild(el);
+  setTimeout(()=>el.remove(),2800);
+}
+
+function log(msg){$('logline').textContent=msg;}
+
+function badge(txt){
+  const el=$('tbadge'); el.textContent=txt; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),1900);
+}
+
+function showChain(n){
+  const el=$('cpop'); $('cpn').textContent='×'+n;
+  el.classList.add('show'); setTimeout(()=>el.classList.remove('show'),1200);
+}
+
+function showMod(c){
+  $('mic').textContent=c.ico||'?';
+  $('mn').textContent=c.nm;
+  $('mtp').textContent=((c.sub||'')+' '+c.type).trim().toUpperCase();
+  let g='';
+  if(c.mhp)g+=`<div class="mst">HP <b>${c.hp||0} / ${c.mhp}</b></div>`;
+  if(c.atk)g+=`<div class="mst">ATK <b>${c.atk}</b></div>`;
+  if(c.def)g+=`<div class="mst">DEF <b>${c.def}</b></div>`;
+  g+=`<div class="mst">Cost <b>${c.cost||0} 💧</b></div>`;
+  g+=`<div class="mst">Rarity <b>${c.rar||'Common'}</b></div>`;
+  $('mgr').innerHTML=g;
+  let tags='';
+  (c.trg||[]).forEach(t=>tags+=`<span class="tg tr">TRIGGER: ${t}</span>`);
+  Object.keys(c.ch||{}).forEach(t=>tags+=`<span class="tg ch">CHASE: ${t}</span>`);
+  $('mtags').innerHTML=tags;
+  $('mfx').textContent=c.fx||'No special effect.';
+  $('modal').classList.add('open');
+}
+
+function cMod(){$('modal').classList.remove('open');}
+
+function showSelInfo(){
+  if(G.sel.hand!==null&&G.p.hand[G.sel.hand]){showMod(G.p.hand[G.sel.hand]);return;}
+  if(G.pending&&G.pending.atk){showMod(G.pending.atk);return;}
+  if(G.sel.fslot!==null){const c=G.p.w[G.sel.fslot];if(c){showMod(c);return;}}
+  toast('Select a card first to view info.','nfo');
+}
+
+function howTo(){
+  showMod({
+    ico:'📖',nm:'How to Play',type:'guide',sub:'',rar:'',cost:0,trg:[],ch:{},
+    fx:'PHASES: Draw → Play cards → Battle → End turn.\n\nSUMMON warriors by tapping them in hand (costs Chakra 💧). Play JUTSU for effects. Set TRAPS face-down.\n\nBATTLE: Select your warrior, then tap an enemy warrior or enemy zone for direct attack.\n\nCHASE SYSTEM: After you attack, allies with matching Chase tags automatically follow up! Chain attacks fill the Combo Meter ⚡.\n\nCOMBO ULTIMATE: At 100% meter, your entire team unleashes a simultaneous strike!\n\nDOUBLE-TAP a hand card to play it instantly. Tap face-up field cards for info.'
+  });
+}
+
+// Deck builder functions
+function showDeckBuilder(){loadBuilder();renderDeckBuilder();sv('builder');}
+function loadBuilder(){const saved=JSON.parse(localStorage.getItem('ic_custom_deck')||'[]');BUILDER.ids=Array.isArray(saved)?saved.slice():[];}
+function renderDeckBuilder(){
+  const pool=$('builder-pool'); const deckEl=$('builder-deck'); if(!pool||!deckEl) return;
+  pool.innerHTML=''; deckEl.innerHTML='';
+  const ids=Object.keys(DB);
+  ids.forEach(id=>{
+    const c=DB[id];
+    const el=document.createElement('div');
+    el.className='card cc '+(c.type==='warrior'?'cw':(c.type==='jutsu'?'cj':'ct'));
+    el.style.display='flex'; el.style.alignItems='center'; el.style.justifyContent='space-between';
+    el.innerHTML = `<div style="display:flex;gap:8px;align-items:center"><div style="font-size:20px">${c.ico||'?'}</div><div><div style="font-weight:700">${c.nm}</div><div style="font-size:11px;color:#94a3b8">${c.type} ${c.sub||''}</div></div></div><div><button class="mbtn" style="padding:6px 8px;font-size:.8rem" onclick="addToBuilder('${id}')">Add</button></div>`;
+    pool.appendChild(el);
+  });
+  BUILDER.ids.forEach((id,idx)=>{
+    const c=DB[id]; const el=document.createElement('div'); el.className='cc '+(c.type==='warrior'?'cw':(c.type==='jutsu'?'cj':'ct'));
+    el.innerHTML=`<div style="display:flex;align-items:center;gap:8px"><div class="ci">${c.ico||'?'}</div><div class="cni"><div class="cn">${c.nm}</div><div class="ct2">${c.type}</div></div></div><div><button class="mbtn sec" style="padding:6px 8px;font-size:.8rem" onclick="removeFromBuilder(${idx})">Remove</button></div>`;
+    deckEl.appendChild(el);
+  });
+  $('builder-count').textContent=BUILDER.ids.length;
+}
+function addToBuilder(id){if(BUILDER.ids.length>=40){toast('Deck limit reached (40)');return;}BUILDER.ids.push(id);renderDeckBuilder();}
+function removeFromBuilder(idx){BUILDER.ids.splice(idx,1);renderDeckBuilder();}
+function saveBuilder(startNow){localStorage.setItem('ic_custom_deck',JSON.stringify(BUILDER.ids));toast('Deck saved!','hl');if(startNow){startGame();}}
+function resetBuilder(){BUILDER.ids=[];localStorage.removeItem('ic_custom_deck');renderDeckBuilder();toast('Deck reset.','nfo');}
+
+// Prevent context menu on long press
+document.addEventListener('contextmenu',e=>e.preventDefault());
+sv('menu');
+</script>
+</body>
+</html>
